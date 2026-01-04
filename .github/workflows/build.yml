@@ -10,36 +10,45 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      # 1️⃣ 取得專案
+      - uses: actions/checkout@v3
 
+      # 2️⃣ 安裝 Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
-      - name: Install system dependencies
+      # 3️⃣ 安裝依賴
+      - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y \
-            python3-pip python3-setuptools python3-dev \
-            build-essential git zlib1g-dev libffi-dev \
-            libssl-dev libncurses5-dev libsqlite3-dev \
-            openjdk-17-jdk unzip wget
-
-      - name: Install Python packages
-        run: |
+          sudo apt install -y python3-pip python3-setuptools python3-dev \
+              build-essential git zlib1g-dev libffi-dev \
+              libssl-dev libncurses5-dev libsqlite3-dev openjdk-17-jdk unzip wget
           pip install --upgrade pip setuptools cython
           pip install buildozer
 
-      - name: Build APK with Buildozer
+      # 4️⃣ 自動下載並同意 Android SDK 授權
+      - name: Prepare Android SDK
         run: |
-          buildozer android debug --no-root
+          export ANDROID_HOME=$HOME/android-sdk
+          mkdir -p $ANDROID_HOME/cmdline-tools
+          cd $ANDROID_HOME/cmdline-tools
+          # 下載 Command Line Tools
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+          unzip cmdline-tools.zip
+          rm cmdline-tools.zip
+          mv cmdline-tools latest
+          export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+          # 接受授權
+          yes | sdkmanager --licenses
+          sdkmanager "platform-tools" "platforms;android-33" "build-tools;36.1.0"
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: MyApp-APK
-          path: |
-            bin/*.apk
-            .buildozer/android/platform/build-arm64-v8a/dists/*/bin/*.apk
+      # 5️⃣ 使用 Buildozer 打包
+      - name: Build APK
+        run: |
+          export ANDROIDSDK=$HOME/android-sdk
+          export ANDROIDNDK=$HOME/android-ndk
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          buildozer android debug --verbose
