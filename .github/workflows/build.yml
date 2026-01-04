@@ -12,7 +12,7 @@ jobs:
       image: kivy/buildozer:latest  # 使用官方 Docker，已含 Android SDK/NDK/Ant
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Show Python version
         run: python --version
@@ -22,7 +22,7 @@ jobs:
           yes|buildozer android debug
 
       - name: Upload APK
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: MyApp-APK
           path: ./bin/MyApp-0.1-debug.apk  # buildozer 生成的 APK 位置
