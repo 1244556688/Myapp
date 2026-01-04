@@ -19,8 +19,8 @@ jobs:
 
       - name: Build APK
         run: |
-            export BUILDOZER_NO_ROOT=1
-            buildozer android debug
+          export BUILDOZER_NO_ROOT=1
+          buildozer android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
