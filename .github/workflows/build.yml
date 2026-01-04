@@ -4,55 +4,25 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
-    env:
-      ANDROID_HOME: /usr/local/lib/android/sdk
-      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
-      ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/25.2.9519653
-      ACCEPT_EULA: Y
-      BUILDOZER_NO_ROOT: 1  # 避免 Buildozer 卡住 root 警告
+    container:
+      image: kivy/buildozer:latest  # 使用官方 Docker，已含 Android SDK/NDK/Ant
 
     steps:
-      # 1️⃣ 取得程式碼
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
-      # 2️⃣ 安裝 Python 與 Buildozer
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
+      - name: Show Python version
+        run: python --version
 
-      - name: Install Buildozer dependencies
-        run: |
-          sudo apt update
-          sudo apt install -y python3-pip python3-setuptools python3-dev \
-              build-essential git zlib1g-dev libffi-dev \
-              libssl-dev libncurses5-dev libsqlite3-dev unzip
-          pip install --upgrade pip setuptools cython
-          pip install buildozer
-
-      # 3️⃣ 安裝 Android SDK/NDK & Build-tools
-      - name: Setup Android SDK & NDK
-        uses: android-actions/setup-android@v3
-        with:
-          sdk-version: "33.0.0"
-          ndk-version: "25.2.9519653"
-          accept-android-sdk-licenses: true
-
-      # 4️⃣ Build APK
       - name: Build APK
         run: |
-          buildozer android debug
+          yes|buildozer android debug
 
-      # 5️⃣ 上傳產出的 APK
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
-          name: myapp-apk
-          path: .buildozer/android/platform/build/dists/**/*.apk
+          name: MyApp-APK
+          path: ./bin/MyApp-0.1-debug.apk  # buildozer 生成的 APK 位置
