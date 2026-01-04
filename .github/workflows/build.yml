@@ -10,33 +10,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      # 1️⃣ 取得原始碼
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Setup JDK
-        uses: actions/setup-java@v3
+      # 2️⃣ 安裝 Python
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          python-version: "3.11"
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          sdk-version: "latest"
-          accept-android-sdk-licenses: true
-
-      - name: Install Python and Buildozer
+      # 3️⃣ 安裝依賴
+      - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y python3-pip python3-setuptools python3-dev build-essential unzip wget
-          pip3 install --upgrade pip setuptools cython
-          pip3 install buildozer
+          sudo apt install -y python3-pip python3-setuptools python3-dev \
+              build-essential git zlib1g-dev libffi-dev \
+              libssl-dev libncurses5-dev libsqlite3-dev unzip wget
+          pip install --upgrade pip setuptools cython
+          pip install buildozer
 
+      # 4️⃣ 安裝 Android SDK / NDK 並接受授權
+      - name: Setup Android SDK & NDK
+        uses: android-actions/setup-android@v3
+        with:
+          sdk-version: "33.0.0"          # 你可以改成你想的 API 等級
+          ndk-version: "25.2.9519653"   # Buildozer 推薦版本
+          accept-android-sdk-licenses: true
+
+      # 5️⃣ 打包 APK
       - name: Build APK
         run: |
-          buildozer android debug --verbose
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: MyApp-APK
-          path: ./.buildozer/android/platform/build/dists/*/bin/*.apk
+          export ANDROIDSDK_ROOT=$ANDROID_HOME
+          buildozer android debug
