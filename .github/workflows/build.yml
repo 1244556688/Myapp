@@ -25,4 +25,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: MyApp-APK
-          path: .buildozer/android/platform/build/dists/MyApp/bin/*.apk  # buildozer 生成的 APK 位置
+          path: .buildozer/android/platform/build/dists/Myapp/bin/*.apk  # buildozer 生成的 APK 位置
