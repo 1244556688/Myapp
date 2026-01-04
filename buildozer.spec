@@ -1,4 +1,4 @@
-O[app]
+[app]
 
 # (str) Title of your application
 title = My Application
