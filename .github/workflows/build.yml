@@ -4,41 +4,42 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      ANDROIDSDK_ACCEPT_LICENSES: "y"  # 自動接受 license
+      BUILDOZER_NO_ROOT: 1             # 避免 root 提示
 
     steps:
-      # 1️⃣ 下載程式碼
       - uses: actions/checkout@v4
 
-      # 2️⃣ 直接用官方 Kivy/Buildozer Docker 來跑
-      - name: Build APK in Docker
-        run: |
-          docker run --rm \
-            -v ${{ github.workspace }}:/app \
-            -w /app \
-            kivy/buildozer:latest \
-            yes|/bin/bash -c "buildozer android debug || true"
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
 
-      # 3️⃣ 確認 APK 是否生成
-      - name: Find generated APK
-        id: find_apk
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y python3-pip python3-setuptools python3-dev \
+              build-essential git zlib1g-dev libffi-dev libssl-dev \
+              libncurses5-dev libsqlite3-dev unzip wget
+          pip install --upgrade pip setuptools cython
+          pip install buildozer
+
+      - name: Build APK
+        run: |
+          buildozer android debug
+          
+      - name: Find APK
         run: |
           APK_PATH=$(find .buildozer/android/platform/build/dists -name "*.apk" | head -n1)
-          if [ -f "$APK_PATH" ]; then
-            echo "APK found: $APK_PATH"
-            echo "apk_path=$APK_PATH" >> $GITHUB_ENV
-          else
-            echo "No APK found, build failed!"
-            exit 1
-          fi
+          echo "APK path: $APK_PATH"
 
-      # 4️⃣ 上傳 APK 作為 artifact
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: MyApp-APK
-          path: ${{ env.apk_path }}
+          name: myapp-apk
+          path: ${{ steps.build.outputs.APK_PATH }}
