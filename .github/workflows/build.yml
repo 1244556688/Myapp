@@ -4,42 +4,43 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      ANDROIDSDK_ACCEPT_LICENSES: "y"  # 自動接受 license
-      BUILDOZER_NO_ROOT: 1             # 避免 root 提示
+      ANDROIDSDK_ACCEPT_LICENSES: "y"
+      BUILDOZER_NO_ROOT: 1
 
     steps:
+      # 1️⃣ 取得你的程式碼
       - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-
+      # 2️⃣ 安裝必要工具
       - name: Install dependencies
         run: |
           sudo apt update
           sudo apt install -y python3-pip python3-setuptools python3-dev \
-              build-essential git zlib1g-dev libffi-dev libssl-dev \
-              libncurses5-dev libsqlite3-dev unzip wget
+              build-essential git zlib1g-dev libffi-dev \
+              libssl-dev libncurses5-dev libsqlite3-dev unzip wget openjdk-17-jdk
           pip install --upgrade pip setuptools cython
           pip install buildozer
 
+      # 3️⃣ 下載 Android SDK/NDK 並自動同意 license
+      - name: Install Android SDK & accept licenses
+        run: |
+          mkdir -p $HOME/.buildozer/android/platform
+          yes | buildozer android update_sdk --sdk-dir $HOME/.buildozer/android/platform/android-sdk
+
+      # 4️⃣ 打包 APK
       - name: Build APK
         run: |
           buildozer android debug
-          
-      - name: Find APK
-        run: |
-          APK_PATH=$(find .buildozer/android/platform/build/dists -name "*.apk" | head -n1)
-          echo "APK path: $APK_PATH"
 
+      # 5️⃣ 上傳 APK 作為 artifact
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: myapp-apk
-          path: ${{ steps.build.outputs.APK_PATH }}
+          name: MyApp-debug.apk
+          path: .buildozer/android/platform/build/dists/*/bin/*.apk
