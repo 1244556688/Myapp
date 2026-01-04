@@ -14,7 +14,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.12"
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
@@ -22,8 +22,8 @@ jobs:
           sudo apt install -y python3-pip python3-setuptools python3-dev \
               build-essential git zlib1g-dev libffi-dev \
               libssl-dev libncurses5-dev libsqlite3-dev
-          pip install --upgrade pip
-          pip install buildozer cython
+          pip install --upgrade pip setuptools cython
+          pip install buildozer
 
       - name: Build APK
         run: |
