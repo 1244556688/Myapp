@@ -9,41 +9,30 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    env:
-      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
-      PATH: ${{ github.workspace }}/android-sdk/cmdline-tools/latest/bin:${{ github.workspace }}/android-sdk/platform-tools:$PATH
-
     steps:
-      # 1️⃣ 取回專案
+      # 1️⃣ 先把 repo 拉下來
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ 安裝系統套件和 Python
-      - name: Install dependencies
+      # 2️⃣ 安裝系統工具
+      - name: Install system tools
         run: |
           sudo apt update
-          sudo apt install -y python3-pip python3-setuptools python3-dev \
-              build-essential git zlib1g-dev libffi-dev \
-              libssl-dev libncurses5-dev libsqlite3-dev unzip wget
-          python3 -m pip install --upgrade pip setuptools cython
-          pip install --upgrade buildozer
+          sudo apt install -y tar unzip wget openjdk-17-jdk git python3-pip python3-setuptools python3-dev build-essential zlib1g-dev libffi-dev libssl-dev libncurses5-dev libsqlite3-dev
 
-      # 3️⃣ 安裝 Android SDK command-line tools
-      - name: Install Android SDK
+      # 3️⃣ 安裝 Python 套件
+      - name: Install Python dependencies
         run: |
-          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
-          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
-          unzip cmdline-tools.zip -d $ANDROID_SDK_ROOT/cmdline-tools
-          mv $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools/latest
-          export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
+          python3 -m pip install --upgrade pip setuptools cython
+          python3 -m pip install --user buildozer
 
-          # 自動同意授權
-          yes | sdkmanager --licenses
+      # 4️⃣ 設定環境變數 (避免 Buildozer 當 root)
+      - name: Set Buildozer environment
+        run: |
+          echo "export BUILDOZER_NO_ROOT=1" >> $GITHUB_ENV
+          echo "export PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
 
-          # 安裝必要套件
-          sdkmanager "platform-tools" "platforms;android-33" "build-tools;36.1.0"
-
-      # 4️⃣ 生成 APK
+      # 5️⃣ 打 APK
       - name: Build APK
         run: |
-          buildozer android debug
+          python3 -m buildozer android debug
