@@ -12,7 +12,7 @@ jobs:
       image: kivy/buildozer:latest  # 使用官方 Docker，已含 Android SDK/NDK/Ant
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Show Python version
         run: python --version
