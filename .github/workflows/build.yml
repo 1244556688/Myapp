@@ -1,32 +1,35 @@
-name: Build APK with Docker
+name: Build APK
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:  # 可以手動觸發
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      # 1️⃣ 取得專案
-      - name: Checkout repository
+      # 1️⃣ 取回你的程式碼
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      # 2️⃣ 使用 Docker 運行 Buildozer
+      # 2️⃣ 建立 artifact 目錄
+      - name: Create output directory
+        run: mkdir -p output
+
+      # 3️⃣ 用 Docker 版本 Buildozer 打包
       - name: Build APK in Docker
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/app \
             -w /app \
-            kivy/buildozer \
-            yes|buildozer android debug
+            kivy/buildozer:latest \
+            buildozer android debug \
+            || cat .buildozer/android/platform/build/dists/*/bin/*.log
 
-      # 3️⃣ 將生成的 APK 上傳到 workflow artifacts
+      # 4️⃣ 上傳 APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: MyApp-APK
-          path: bin/*.apk
+          path: ./.buildozer/android/platform/build/dists/*/bin/*.apk
