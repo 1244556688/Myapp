@@ -1,52 +1,32 @@
-name: Build APK
+name: Build APK with Docker
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
+  workflow_dispatch:  # 可以手動觸發
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ 取得專案程式碼
+      # 1️⃣ 取得專案
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ 安裝 Python
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-
-      # 3️⃣ 安裝系統依賴
-      - name: Install dependencies
+      # 2️⃣ 使用 Docker 運行 Buildozer
+      - name: Build APK in Docker
         run: |
-          sudo apt update
-          sudo apt install -y python3-pip python3-setuptools python3-dev \
-              build-essential git zlib1g-dev libffi-dev libssl-dev \
-              libncurses5-dev libsqlite3-dev unzip wget tar
-          pip install --upgrade pip setuptools cython
-          pip install buildozer
+          docker run --rm \
+            -v ${{ github.workspace }}:/app \
+            -w /app \
+            kivy/buildozer \
+            buildozer android debug
 
-      # 4️⃣ 建立 Buildozer Android SDK 路徑
-      - name: Prepare Android SDK
-        run: mkdir -p $HOME/.buildozer/android/platform/android-sdk
-
-      # 5️⃣ 建 APK（自動同意授權，避免 root 問題）
-      - name: Build APK
-        env:
-          ANDROID_HOME: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
-          ANDROID_SDK_ROOT: ${{ github.workspace }}/.buildozer/android/platform/android-sdk
-          ACCEPT_ANDROID_LICENSES: "y"
-          BUILDOZER_NO_ROOT: "1"
-        run: buildozer android debug --verbose --no-root
-
-      # 6️⃣ 上傳 APK 作為 artifact
+      # 3️⃣ 將生成的 APK 上傳到 workflow artifacts
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: myapp-apk
-          path: ./.buildozer/android/platform/build/dists/Myapp/bin/*.apk
+          name: MyApp-APK
+          path: bin/*.apk
