@@ -9,35 +9,41 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    env:
+      ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
+      PATH: ${{ github.workspace }}/android-sdk/cmdline-tools/latest/bin:${{ github.workspace }}/android-sdk/platform-tools:$PATH
+
     steps:
-      # 1️⃣ 安裝系統工具
-      - name: Install system utilities
+      # 1️⃣ 取回專案
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ 安裝系統套件和 Python
+      - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y tar unzip wget curl git python3-pip python3-setuptools python3-dev build-essential openjdk-17-jdk
+          sudo apt install -y python3-pip python3-setuptools python3-dev \
+              build-essential git zlib1g-dev libffi-dev \
+              libssl-dev libncurses5-dev libsqlite3-dev unzip wget
+          python3 -m pip install --upgrade pip setuptools cython
+          pip install --upgrade buildozer
 
-      # 2️⃣ Checkout 你的 repo
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      # 3️⃣ 安裝 Python 套件
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-
-      - name: Install Buildozer
+      # 3️⃣ 安裝 Android SDK command-line tools
+      - name: Install Android SDK
         run: |
-          python -m pip install --upgrade pip setuptools cython
-          pip install buildozer
+          mkdir -p $ANDROID_SDK_ROOT/cmdline-tools
+          wget https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
+          unzip cmdline-tools.zip -d $ANDROID_SDK_ROOT/cmdline-tools
+          mv $ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools/latest
+          export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
 
-      # 4️⃣ 同意 Android SDK 授權
-      - name: Accept Android SDK Licenses
-        run: |
-          mkdir -p $HOME/.android
-          yes | sdkmanager --licenses || true
+          # 自動同意授權
+          yes | sdkmanager --licenses
 
-      # 5️⃣ Build APK
+          # 安裝必要套件
+          sdkmanager "platform-tools" "platforms;android-33" "build-tools;36.1.0"
+
+      # 4️⃣ 生成 APK
       - name: Build APK
         run: |
           buildozer android debug
