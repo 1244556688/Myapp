@@ -4,32 +4,41 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      # 1️⃣ 取回你的程式碼
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      # 1️⃣ 下載程式碼
+      - uses: actions/checkout@v4
 
-      # 2️⃣ 建立 artifact 目錄
-      - name: Create output directory
-        run: mkdir -p output
-
-      # 3️⃣ 用 Docker 版本 Buildozer 打包
+      # 2️⃣ 直接用官方 Kivy/Buildozer Docker 來跑
       - name: Build APK in Docker
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/app \
             -w /app \
             kivy/buildozer:latest \
-            yes|buildozer android debug \
-            || cat .buildozer/android/platform/build/dists/*/bin/*.log
+            /bin/bash -c "buildozer android debug || true"
 
-      # 4️⃣ 上傳 APK
+      # 3️⃣ 確認 APK 是否生成
+      - name: Find generated APK
+        id: find_apk
+        run: |
+          APK_PATH=$(find .buildozer/android/platform/build/dists -name "*.apk" | head -n1)
+          if [ -f "$APK_PATH" ]; then
+            echo "APK found: $APK_PATH"
+            echo "apk_path=$APK_PATH" >> $GITHUB_ENV
+          else
+            echo "No APK found, build failed!"
+            exit 1
+          fi
+
+      # 4️⃣ 上傳 APK 作為 artifact
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: MyApp-APK
-          path: ./.buildozer/android/platform/build/dists/*/bin/*.apk
+          path: ${{ env.apk_path }}
