@@ -22,7 +22,7 @@ jobs:
             -v ${{ github.workspace }}:/app \
             -w /app \
             kivy/buildozer \
-            buildozer android debug
+            yes|buildozer android debug
 
       # 3️⃣ 將生成的 APK 上傳到 workflow artifacts
       - name: Upload APK
