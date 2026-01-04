@@ -21,7 +21,7 @@ jobs:
             -v ${{ github.workspace }}:/app \
             -w /app \
             kivy/buildozer:latest \
-            /bin/bash -c "buildozer android debug || true"
+            yes|/bin/bash -c "buildozer android debug || true"
 
       # 3️⃣ 確認 APK 是否生成
       - name: Find generated APK
