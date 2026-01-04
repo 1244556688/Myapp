@@ -24,7 +24,7 @@ jobs:
             -v ${{ github.workspace }}:/app \
             -w /app \
             kivy/buildozer:latest \
-            buildozer android debug \
+            yes|buildozer android debug \
             || cat .buildozer/android/platform/build/dists/*/bin/*.log
 
       # 4️⃣ 上傳 APK
