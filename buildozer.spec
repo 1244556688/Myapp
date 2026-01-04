@@ -10,7 +10,7 @@ package.name = myapp
 package.domain = org.test
 
 # (str) Source code where the main.py lives
-source.dir = .
+source.dir =main.py
 
 # (list) Source files to include
 source.include_exts = py,png,jpg,kv,atlas
