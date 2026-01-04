@@ -10,29 +10,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ 先把 repo 拉下來
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ 安裝系統工具
       - name: Install system tools
         run: |
           sudo apt update
           sudo apt install -y tar unzip wget openjdk-17-jdk git python3-pip python3-setuptools python3-dev build-essential zlib1g-dev libffi-dev libssl-dev libncurses5-dev libsqlite3-dev
 
-      # 3️⃣ 安裝 Python 套件
       - name: Install Python dependencies
         run: |
           python3 -m pip install --upgrade pip setuptools cython
           python3 -m pip install --user buildozer
 
-      # 4️⃣ 設定環境變數 (避免 Buildozer 當 root)
       - name: Set Buildozer environment
         run: |
           echo "export BUILDOZER_NO_ROOT=1" >> $GITHUB_ENV
           echo "export PATH=$HOME/.local/bin:$PATH" >> $GITHUB_ENV
 
-      # 5️⃣ 打 APK
+      # ✅ 自動接受 SDK 授權
+      - name: Accept Android SDK licenses
+        run: |
+          yes | $HOME/.local/bin/buildozer android update sdk
+
       - name: Build APK
         run: |
           python3 -m buildozer android debug
