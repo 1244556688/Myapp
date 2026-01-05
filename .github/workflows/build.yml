@@ -2,8 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
@@ -13,22 +12,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
-      - name: Install system dependencies
+      - name: Install system packages
         run: |
           sudo apt update
-          sudo apt install -y python3-pip python3-setuptools python3-dev build-essential unzip wget git
-          python3 -m pip install --upgrade pip setuptools cython
-          python3 -m pip install buildozer
+          sudo apt install -y \
+            unzip zip openjdk-17-jdk \
+            python3-pip python3-setuptools \
+            build-essential git
+          pip install --upgrade pip
+          pip install cython buildozer
 
-      - name: Setup Android SDK & NDK
+      - name: Setup Android SDK (auto accept license)
         uses: android-actions/setup-android@v3
         with:
-          sdk-version: "33.0.0"
+          sdk-version: "34"
           ndk-version: "25.2.9519653"
           accept-android-sdk-licenses: true
 
@@ -40,4 +42,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: MyApp-APK
-          path: .buildozer/android/platform/build/dists/myapp/bin/*.apk
+          path: .buildozer/android/platform/build/dists/**/bin/*.apk
