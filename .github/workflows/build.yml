@@ -12,31 +12,37 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Setup Python 3.10
         uses: actions/setup-python@v4
         with:
-          python-version: "3.11"
+          python-version: "3.10"
 
-      - name: Install system packages
+      - name: Install system deps
         run: |
           sudo apt update
           sudo apt install -y \
-            unzip zip openjdk-17-jdk \
-            python3-pip python3-setuptools \
-            build-essential git
+            openjdk-17-jdk \
+            unzip zip git \
+            build-essential \
+            libffi-dev libssl-dev
           pip install --upgrade pip
           pip install cython buildozer
 
-      - name: Setup Android SDK (auto accept license)
+      - name: Setup Android SDK & NDK r25b
         uses: android-actions/setup-android@v3
         with:
-          sdk-version: "34"
-          ndk-version: "25.2.9519653"
-          yes|accept-android-sdk-licenses: true
+          api-level: 31
+          ndk-version: 25.2.9519653
+          accept-android-sdk-licenses: true
+
+      - name: Force NDK for buildozer
+        run: |
+          echo "ANDROIDNDK=$ANDROID_NDK_HOME" >> $GITHUB_ENV
+          echo "ANDROIDSDK=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
 
       - name: Build APK
         run: |
-          yes|buildozer android debug
+          buildozer -v android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
