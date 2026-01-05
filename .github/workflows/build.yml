@@ -4,25 +4,40 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: kivy/buildozer:latest  # 使用官方 Docker，已含 Android SDK/NDK/Ant
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Show Python version
-        run: python --version
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y python3-pip python3-setuptools python3-dev build-essential unzip wget git
+          python3 -m pip install --upgrade pip setuptools cython
+          python3 -m pip install buildozer
+
+      - name: Setup Android SDK & NDK
+        uses: android-actions/setup-android@v3
+        with:
+          sdk-version: "33.0.0"
+          ndk-version: "25.2.9519653"
+          accept-android-sdk-licenses: true
 
       - name: Build APK
         run: |
-          yes|buildozer android debug
+          buildozer android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: MyApp-APK
-          path: .buildozer/android/platform/build/dists/Myapp/bin/*.apk  # buildozer 生成的 APK 位置
+          path: .buildozer/android/platform/build/dists/myapp/bin/*.apk
