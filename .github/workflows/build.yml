@@ -26,7 +26,7 @@ jobs:
 
       - name: Build APK
         run: |
-          yes|uildozer android debug
+          yes|buildozer android debug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
