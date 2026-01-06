@@ -33,4 +33,4 @@ jobs:
         with:
           name: MyApp-APK
           path: |
-             output/myapp.apk
+             bin/myapp.apk
