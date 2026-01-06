@@ -32,4 +32,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: MyApp-APK
-          path: .buildozer/android/platform/build/dists/*/bin/myapp.apk
+          path: |
+             output/myapp.apk
