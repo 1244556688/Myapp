@@ -1,4 +1,3 @@
-# main.py
 import random
 import requests
 from kivy.app import App
@@ -14,42 +13,57 @@ CITY = "Taipei"
 class WeatherAppUI(FloatLayout):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
         self.weather_type = "clear"
         self.raindrops = []
         self.snowflakes = []
         self.clouds = []
 
-        self.background = Rectangle(size=self.size, pos=self.pos)
-        self.bind(size=self.update_bg, pos=self.update_bg)
+        # 背景（不會被清掉）
         with self.canvas.before:
             Color(0.6, 0.8, 1)
-            self.bg_color = Rectangle(size=self.size, pos=self.pos)
+            self.bg = Rectangle(size=self.size, pos=self.pos)
 
-        self.weather_label = Label(text="Loading...", font_size='24sp', size_hint=(None, None),
-                                   pos_hint={'center_x':0.5, 'top':0.95})
+        self.bind(size=self._update_bg, pos=self._update_bg)
+
+        # UI 元件
+        self.weather_label = Label(
+            text="Loading...",
+            font_size='24sp',
+            pos_hint={'center_x': 0.5, 'top': 0.95},
+            size_hint=(None, None)
+        )
         self.add_widget(self.weather_label)
 
-        self.icon = AsyncImage(source="", size_hint=(None, None), size=(100, 100),
-                               pos_hint={'center_x':0.5, 'top':0.85})
+        self.icon = AsyncImage(
+            size=(100, 100),
+            size_hint=(None, None),
+            pos_hint={'center_x': 0.5, 'top': 0.85}
+        )
         self.add_widget(self.icon)
 
-        Clock.schedule_once(lambda dt: self.fetch_weather(), 1)
-        Clock.schedule_interval(self.update_animation, 1/30)
+        Clock.schedule_once(self.fetch_weather, 1)
+        Clock.schedule_interval(self.update_animation, 1 / 30)
 
-    def update_bg(self, *args):
-        self.bg_color.size = self.size
-        self.bg_color.pos = self.pos
+    def _update_bg(self, *args):
+        self.bg.size = self.size
+        self.bg.pos = self.pos
 
-    def fetch_weather(self):
-        url = f"http://api.openweathermap.org/data/2.5/weather?q={CITY}&appid={API_KEY}&units=metric"
+    def fetch_weather(self, dt):
         try:
-            r = requests.get(url, timeout=5)
-            data = r.json()
+            url = (
+                f"https://api.openweathermap.org/data/2.5/weather"
+                f"?q={CITY}&appid={API_KEY}&units=metric"
+            )
+            data = requests.get(url, timeout=5).json()
+
             desc = data['weather'][0]['main'].lower()
             temp = data['main']['temp']
-            self.weather_label.text = f"{CITY}: {desc.capitalize()}, {temp}°C"
             icon_code = data['weather'][0]['icon']
-            self.icon.source = f"http://openweathermap.org/img/wn/{icon_code}@2x.png"
+
+            self.weather_label.text = f"{CITY}: {desc.capitalize()}, {temp}°C"
+            self.icon.source = f"https://openweathermap.org/img/wn/{icon_code}@2x.png"
+
             if "rain" in desc:
                 self.weather_type = "rain"
             elif "snow" in desc:
@@ -58,57 +72,64 @@ class WeatherAppUI(FloatLayout):
                 self.weather_type = "cloud"
             else:
                 self.weather_type = "clear"
-        except Exception as e:
-            self.weather_label.text = "Failed to load weather"
+
+        except:
+            self.weather_label.text = "Weather load failed"
 
     def update_animation(self, dt):
-        self.canvas.clear()
-        with self.canvas:
+        self.canvas.after.clear()
+
+        with self.canvas.after:
             if self.weather_type == "rain":
                 Color(0.4, 0.6, 1)
-                if len(self.raindrops) < 100:
-                    for _ in range(5):
-                        x = random.randint(0, self.width)
-                        y = self.height
-                        self.raindrops.append([x, y, random.randint(2, 4)])
-                new_raindrops = []
-                for drop in self.raindrops:
-                    drop[1] -= drop[2]
-                    Ellipse(pos=(drop[0], drop[1]), size=(2, 10))
-                    if drop[1] > 0:
-                        new_raindrops.append(drop)
-                self.raindrops = new_raindrops
+                for _ in range(5):
+                    self.raindrops.append([
+                        random.randint(0, int(self.width)),
+                        self.height,
+                        random.randint(5, 8)
+                    ])
+
+                new_drops = []
+                for x, y, s in self.raindrops:
+                    y -= s
+                    Ellipse(pos=(x, y), size=(2, 12))
+                    if y > 0:
+                        new_drops.append([x, y, s])
+                self.raindrops = new_drops
+
             elif self.weather_type == "snow":
                 Color(1, 1, 1)
-                if len(self.snowflakes) < 100:
-                    for _ in range(3):
-                        x = random.randint(0, self.width)
-                        y = self.height
-                        self.snowflakes.append([x, y, random.uniform(1, 2)])
+                for _ in range(3):
+                    self.snowflakes.append([
+                        random.randint(0, int(self.width)),
+                        self.height,
+                        random.uniform(1, 2)
+                    ])
+
                 new_snow = []
-                for flake in self.snowflakes:
-                    flake[1] -= flake[2]
-                    Ellipse(pos=(flake[0], flake[1]), size=(5, 5))
-                    if flake[1] > 0:
-                        new_snow.append(flake)
+                for x, y, s in self.snowflakes:
+                    y -= s
+                    Ellipse(pos=(x, y), size=(5, 5))
+                    if y > 0:
+                        new_snow.append([x, y, s])
                 self.snowflakes = new_snow
+
             elif self.weather_type == "cloud":
-                Color(0.8, 0.8, 0.8)
-                if len(self.clouds) < 5:
-                    for _ in range(1):
-                        x = -200
-                        y = random.randint(int(self.height*0.6), int(self.height*0.9))
-                        self.clouds.append([x, y, random.randint(100, 200)])
+                Color(0.85, 0.85, 0.85)
+                if len(self.clouds) < 4:
+                    self.clouds.append([
+                        -200,
+                        random.randint(int(self.height * 0.6), int(self.height * 0.85)),
+                        random.randint(120, 200)
+                    ])
+
                 new_clouds = []
-                for cloud in self.clouds:
-                    cloud[0] += 1
-                    Ellipse(pos=(cloud[0], cloud[1]), size=(cloud[2], 60))
-                    if cloud[0] < self.width:
-                        new_clouds.append(cloud)
+                for x, y, w in self.clouds:
+                    x += 0.5
+                    Ellipse(pos=(x, y), size=(w, 60))
+                    if x < self.width:
+                        new_clouds.append([x, y, w])
                 self.clouds = new_clouds
-            else:
-                Color(0.6, 0.8, 1)
-                Rectangle(size=self.size, pos=self.pos)
 
 class WeatherApp(App):
     def build(self):
