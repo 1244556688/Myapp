@@ -12,6 +12,10 @@ package.domain = org.test
 # (str) Source code where the main.py lives
 source.dir = .
 
+android.api = 33
+
+android.permissions = INTERNET
+
 # (list) Source files to include
 source.include_exts = py,png,jpg,kv,atlas
 
