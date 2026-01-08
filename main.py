@@ -11,7 +11,7 @@ from kivy.clock import Clock
 from kivy.graphics import Color, Ellipse, Rectangle
 
 API_KEY = "43e88925721feb045a1d893028d3dda2"
-CITY = "Taipei"
+CITY = "Taichung"
 
 
 class WeatherAppUI(FloatLayout):
@@ -23,12 +23,14 @@ class WeatherAppUI(FloatLayout):
         self.snowflakes = []
         self.clouds = []
 
+        # ===== 背景 & 天氣動畫層（不會遮字）=====
         with self.canvas.before:
             Color(0.6, 0.8, 1)
             self.bg = Rectangle(size=self.size, pos=self.pos)
 
         self.bind(size=self.update_bg, pos=self.update_bg)
 
+        # ===== UI（一定在最上層）=====
         self.weather_label = Label(
             text="Loading weather...",
             font_size="24sp",
@@ -66,11 +68,9 @@ class WeatherAppUI(FloatLayout):
 
             self.weather_label.text = f"{CITY}  {temp}°C  {desc.capitalize()}"
             self.icon.source = f"https://openweathermap.org/img/wn/{icon}@2x.png"
-
             self.weather_type = self.map_weather(desc)
 
         except:
-            # ✅ 保底：模擬天氣（一定成功）
             self.use_fake_weather()
 
     def map_weather(self, desc):
@@ -89,9 +89,13 @@ class WeatherAppUI(FloatLayout):
         self.icon.source = ""
 
     def update_animation(self, dt):
-        self.canvas.after.clear()
+        self.canvas.before.clear()
 
-        with self.canvas.after:
+        with self.canvas.before:
+            # 背景色
+            Color(0.6, 0.8, 1)
+            Rectangle(size=self.size, pos=self.pos)
+
             if self.weather_type == "rain":
                 Color(0.4, 0.6, 1)
                 for _ in range(5):
@@ -118,10 +122,10 @@ class WeatherAppUI(FloatLayout):
                 Color(0.9, 0.9, 0.9)
                 for _ in range(1):
                     self.clouds.append(
-                        [-200, random.randint(int(self.height * 0.6), int(self.height * 0.9))]
+                        [-200, random.randint(int(self.height * 0.6), int(self.height * 0.85))]
                     )
                 for c in self.clouds:
-                    c[0] += 1
+                    c[0] += 0.6
                     Ellipse(pos=c, size=(180, 60))
                 self.clouds = [c for c in self.clouds if c[0] < self.width + 200]
 
