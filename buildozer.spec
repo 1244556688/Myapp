@@ -1,7 +1,7 @@
 [app]
 
 # 應用程式名稱
-title = My Application
+title = music
 
 # 套件名稱（只能小寫）
 package.name = myapp
