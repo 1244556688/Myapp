@@ -19,7 +19,7 @@ source.include_exts = py,png,jpg,kv,atlas
 version = 0.1
 
 # Python / Kivy 需求
-requirements = python3,kivy
+requirements = python3,kivy,yt-dlp,ffmpeg
 
 # Kivy 使用 SDL2（正確）
 bootstrap = sdl2
