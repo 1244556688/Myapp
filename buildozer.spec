@@ -36,7 +36,7 @@ android.api = 33
 android.minapi = 21
 
 # 權限
-android.permissions = INTERNET
+android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
 
 # 🔑 關鍵：支援手機 + 模擬器
 android.arch = arm64-v8a, armeabi-v7a, x86_64
