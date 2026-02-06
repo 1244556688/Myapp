@@ -1,165 +1,188 @@
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.button import Button
 from kivy.uix.progressbar import ProgressBar
+from kivy.uix.spinner import Spinner
 from kivy.uix.scrollview import ScrollView
+from kivy.uix.gridlayout import GridLayout
 from kivy.clock import Clock
-from kivy.core.window import Window
+from kivy.utils import platform
+from kivy.factory import Factory
 
-import threading
-import subprocess
-import os
-import webbrowser
+import subprocess, threading, os, webbrowser
 
-# plyer 用於手機選資料夾
-from plyer import filechooser
+# ========= 全域設定 =========
+FONT = "fonts/貌艙醳醳极楛-棉极.otf"
 
-# 設定視窗大小（模擬桌面，可刪除手機使用）
-Window.size = (800, 750)
+if platform == "android":
+    DOWNLOAD_FOLDER = "/storage/emulated/0/Download"
+else:
+    DOWNLOAD_FOLDER = os.getcwd()
 
-download_folder = ""
 download_queue = []
 
-class YTDownloader(BoxLayout):
+# Spinner 下拉選單套字型（關鍵）
+Factory.register('SpinnerOption', cls=Button)
+
+# ========= UI =========
+class DownloaderLayout(BoxLayout):
     def __init__(self, **kwargs):
-        super().__init__(orientation='vertical', spacing=5, padding=5, **kwargs)
+        super().__init__(orientation="vertical", spacing=10, padding=12, **kwargs)
 
-        # URL 輸入
-        self.add_widget(Label(text="輸入影片網址（每行一個）:", size_hint_y=None, height=30))
-        self.url_text = TextInput(size_hint_y=None, height=100, multiline=True)
-        self.add_widget(self.url_text)
+        self.url_input = TextInput(
+            hint_text="輸入影片網址（每行一個）",
+            multiline=True,
+            size_hint_y=None,
+            height=150,
+            font_name=FONT
+        )
+        self.add_widget(self.url_input)
 
-        # 按鈕
-        btn_layout = GridLayout(cols=2, size_hint_y=None, height=40, spacing=5)
-        self.add_btn = Button(text="加入隊列")
-        self.add_btn.bind(on_release=self.add_to_queue)
-        btn_layout.add_widget(self.add_btn)
+        btns = BoxLayout(size_hint_y=None, height=45, spacing=10)
+        self.add_btn = Button(text="加入隊列", font_name=FONT)
+        self.remove_btn = Button(text="移除最後一個", font_name=FONT)
+        btns.add_widget(self.add_btn)
+        btns.add_widget(self.remove_btn)
+        self.add_widget(btns)
 
-        self.remove_btn = Button(text="移除隊列")
-        self.remove_btn.bind(on_release=self.remove_from_queue)
-        btn_layout.add_widget(self.remove_btn)
-        self.add_widget(btn_layout)
-
-        # 下載隊列顯示
-        self.queue_text = TextInput(size_hint_y=None, height=100, readonly=True)
-        self.add_widget(self.queue_text)
-
-        # 選資料夾
-        folder_layout = GridLayout(cols=2, size_hint_y=None, height=40, spacing=5)
-        self.select_folder_btn = Button(text="選擇下載資料夾")
-        self.select_folder_btn.bind(on_release=self.select_folder)
-        folder_layout.add_widget(self.select_folder_btn)
-        self.folder_label = Label(text="下載資料夾: 未選擇")
-        folder_layout.add_widget(self.folder_label)
-        self.add_widget(folder_layout)
-
-        # 選單：下載模式
-        mode_layout = GridLayout(cols=2, size_hint_y=None, height=40, spacing=5)
-        mode_layout.add_widget(Label(text="下載模式:"))
-        from kivy.uix.spinner import Spinner
-        self.mode_spinner = Spinner(text="單支影片", values=["單支影片", "整個播放清單"])
-        mode_layout.add_widget(self.mode_spinner)
-        self.add_widget(mode_layout)
-
-        # 選單：檔案格式
-        format_layout = GridLayout(cols=2, size_hint_y=None, height=40, spacing=5)
-        format_layout.add_widget(Label(text="檔案格式:"))
-        self.format_spinner = Spinner(text="MP4", values=["WebM", "MP4", "MP3"])
-        format_layout.add_widget(self.format_spinner)
-        self.add_widget(format_layout)
-
-        # 下載按鈕
-        self.download_btn = Button(text="開始下載隊列", size_hint_y=None, height=50, background_color=(0.12,0.42,0.65,1))
-        self.download_btn.bind(on_release=self.download_queue_func)
-        self.add_widget(self.download_btn)
-
-        # 進度條
-        self.progress_bar = ProgressBar(max=1.0, value=0.0, size_hint_y=None, height=30)
-        self.add_widget(self.progress_bar)
-
-        # 文字區域（顯示下載狀態）
-        self.scroll = ScrollView()
-        self.output_text = TextInput(readonly=True, size_hint_y=None, height=300)
-        self.scroll.add_widget(self.output_text)
+        self.scroll = ScrollView(size_hint=(1, 0.25))
+        self.queue_layout = GridLayout(cols=1, size_hint_y=None, spacing=5)
+        self.queue_layout.bind(minimum_height=self.queue_layout.setter("height"))
+        self.scroll.add_widget(self.queue_layout)
         self.add_widget(self.scroll)
 
-    def select_folder(self, instance):
-        global download_folder
-        path = filechooser.choose_dir()
-        if path:
-            download_folder = path[0]
-            self.folder_label.text = f"下載資料夾: {download_folder}"
+        self.add_widget(Label(text="下載模式", font_name=FONT, size_hint_y=None, height=25))
+        self.mode_spinner = Spinner(
+            text="單支影片",
+            values=["單支影片", "整個播放清單"],
+            size_hint_y=None,
+            height=40,
+            font_name=FONT
+        )
+        self.add_widget(self.mode_spinner)
 
-    def add_to_queue(self, instance):
-        urls_text = self.url_text.text.strip()
-        if not urls_text:
-            self.output_text.text += "請輸入至少一個網址\n"
-            return
-        lines = [line.strip() for line in urls_text.splitlines() if line.strip()]
+        self.add_widget(Label(text="檔案格式", font_name=FONT, size_hint_y=None, height=25))
+        self.format_spinner = Spinner(
+            text="MP4",
+            values=["WebM", "MP4", "MP3"],
+            size_hint_y=None,
+            height=40,
+            font_name=FONT
+        )
+        self.add_widget(self.format_spinner)
+
+        self.download_btn = Button(
+            text="開始下載隊列",
+            size_hint_y=None,
+            height=60,
+            font_name=FONT
+        )
+        self.add_widget(self.download_btn)
+
+        self.progress = ProgressBar(max=1, value=0)
+        self.add_widget(self.progress)
+
+        info = BoxLayout(size_hint_y=None, height=30)
+        self.speed_label = Label(text="速度: --", font_name=FONT)
+        self.eta_label = Label(text="剩餘: --", font_name=FONT)
+        info.add_widget(self.speed_label)
+        info.add_widget(self.eta_label)
+        self.add_widget(info)
+
+        self.output = TextInput(
+            readonly=True,
+            size_hint_y=0.35,
+            font_name=FONT
+        )
+        self.add_widget(self.output)
+
+        # 綁定
+        self.add_btn.bind(on_release=self.add_to_queue)
+        self.remove_btn.bind(on_release=self.remove_from_queue)
+        self.download_btn.bind(on_release=self.start_download)
+
+    # ========= 功能 =========
+    def add_to_queue(self, _):
+        lines = [l.strip() for l in self.url_input.text.splitlines() if l.strip()]
         for url in lines:
             download_queue.append(url)
-            self.queue_text.text += url + "\n"
-        self.url_text.text = ""
+            self.queue_layout.add_widget(
+                Label(text=url, size_hint_y=None, height=28, font_name=FONT)
+            )
+        self.url_input.text = ""
 
-    def remove_from_queue(self, instance):
-        lines = self.queue_text.text.strip().splitlines()
-        download_queue.clear()
-        self.queue_text.text = ""
+    def remove_from_queue(self, _):
+        if download_queue and self.queue_layout.children:
+            download_queue.pop(-1)
+            self.queue_layout.remove_widget(self.queue_layout.children[-1])
 
-    def download_queue_func(self, instance):
+    def start_download(self, _):
         if not download_queue:
-            self.output_text.text += "下載隊列為空\n"
-            return
-        if not download_folder:
-            self.output_text.text += "請選擇下載資料夾\n"
+            self.output.text += "下載隊列為空\n"
             return
 
-        def download_worker():
+        mode = self.mode_spinner.text
+        fmt = self.format_spinner.text
+
+        def worker():
             for url in download_queue:
-                try:
-                    self.output_text.text += f"開始下載: {url}\n"
-                    output_path = os.path.join(download_folder, "%(title)s.%(ext)s")
-                    cmd = ["yt-dlp", "-o", output_path, "--newline", url]
+                self.log(f"開始下載: {url}")
 
-                    if self.mode_spinner.text == "單支影片":
-                        cmd.insert(1, "--no-playlist")
-                    if self.format_spinner.text == "MP4":
-                        cmd.insert(1, "-f")
-                        cmd.insert(2, "bestvideo+bestaudio")
-                        cmd.insert(3, "--merge-output-format")
-                        cmd.insert(4, "mp4")
-                    elif self.format_spinner.text == "MP3":
-                        cmd.insert(1, "-x")
-                        cmd.insert(2, "--audio-format")
-                        cmd.insert(3, "mp3")
+                out = os.path.join(DOWNLOAD_FOLDER, "%(title)s.%(ext)s")
+                cmd = ["yt-dlp", "-o", out, "--newline", url]
 
-                    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
-                    for line in process.stdout:
-                        self.output_text.text += line
-                        self.output_text.cursor = (0, len(self.output_text.text))
-                        if "[download]" in line and "%" in line:
-                            percent = line.split("%")[0].split()[-1]
-                            try:
-                                Clock.schedule_once(lambda dt, p=float(percent)/100: setattr(self.progress_bar, 'value', p))
-                            except:
-                                pass
-                    process.wait()
-                    self.output_text.text += "下載完成！\n\n"
-                    Clock.schedule_once(lambda dt: setattr(self.progress_bar, 'value', 0))
-                    webbrowser.open(download_folder)
-                except Exception as e:
-                    self.output_text.text += f"錯誤: {str(e)}\n"
+                if mode == "單支影片":
+                    cmd.insert(1, "--no-playlist")
 
-        threading.Thread(target=download_worker).start()
+                if fmt == "MP4":
+                    cmd[1:1] = ["-f", "bestvideo+bestaudio", "--merge-output-format", "mp4"]
+                elif fmt == "MP3":
+                    cmd[1:1] = ["-x", "--audio-format", "mp3"]
+
+                p = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=1
+                )
+
+                for line in p.stdout:
+                    self.log(line, raw=True)
+                    if "[download]" in line and "%" in line:
+                        try:
+                            parts = line.split()
+                            percent = float(parts[1].replace("%", "")) / 100
+                            speed = parts[6]
+                            eta = parts[8]
+                            Clock.schedule_once(lambda dt, v=percent: setattr(self.progress, "value", v))
+                            Clock.schedule_once(lambda dt, s=speed: setattr(self.speed_label, "text", f"速度: {s}"))
+                            Clock.schedule_once(lambda dt, e=eta: setattr(self.eta_label, "text", f"剩餘: {e}"))
+                        except:
+                            pass
+
+                p.wait()
+                self.log("下載完成！\n")
+                Clock.schedule_once(lambda dt: setattr(self.progress, "value", 0))
+
+            self.log("所有下載完成！")
+            if platform != "android":
+                webbrowser.open(DOWNLOAD_FOLDER)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def log(self, text, raw=False):
+        self.output.text += text if raw else text + "\n"
+        self.output.cursor = (len(self.output.text), 0)
 
 
-class YTApp(App):
+class YTDownloaderApp(App):
     def build(self):
-        return YTDownloader()
+        self.title = "YT Downloader"
+        return DownloaderLayout()
 
 
 if __name__ == "__main__":
-    YTApp().run()
+    YTDownloaderApp().run()
